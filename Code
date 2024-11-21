@@ -1,0 +1,84 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+int sensorPin = A0;  // Pin donde está conectado el sensor de gas
+float sensorValue = 0;  // Valor del sensor
+
+// Pines de los LEDs
+int ledVerde = 2;   // LED verde en el pin 2
+int ledRojo = 3;    // LED rojo en el pin 3
+int ledNaranja = 5; // LED naranja en el pin 5
+int buzzer = 4;     // Pin para el zumbador (buzzer)
+
+// Inicializamos la pantalla LCD I2C
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // Dirección I2C y tipo de pantalla
+
+// Umbrales para la calidad del aire
+int umbralLimpio = 90;     // Umbral para aire limpio
+int umbralModerado = 150;   // Umbral para aire moderado (entre limpio y contaminado)
+
+void setup() {
+  Wire.begin();  // Inicialización de la comunicación I2C
+  lcd.begin(16, 2);
+  lcd.backlight();
+  lcd.print("Calidad Aire:");
+
+  Serial.begin(9600);  // Comunicación serial para ver los datos en el monitor serial
+  pinMode(sensorPin, INPUT);  // Definimos el pin del sensor como entrada
+  
+  // Definimos los pines de los LEDs y el buzzer como salidas
+  pinMode(ledVerde, OUTPUT);
+  pinMode(ledRojo, OUTPUT);
+  pinMode(ledNaranja, OUTPUT);
+  pinMode(buzzer, OUTPUT);
+}
+
+void loop() {
+  // Leer el valor del sensor
+  sensorValue = analogRead(sensorPin);
+  
+  // Mostrar en el monitor serial
+  Serial.print("Calidad del aire: ");
+  Serial.println(sensorValue);
+  
+  // Limpiar la segunda línea de la pantalla LCD antes de escribir
+  lcd.setCursor(0, 1);
+  lcd.print("                "); // Borrar el contenido previo
+
+  // Mostrar el valor del sensor en la primera línea del LCD
+  lcd.setCursor(0, 0);
+  lcd.print("Aire: ");
+  lcd.print(sensorValue);  // Mostrar el valor del sensor
+
+  // Controlar LEDs y el buzzer según la calidad del aire
+  if (sensorValue < umbralLimpio) {
+    // Aire limpio
+    lcd.setCursor(0, 1);
+    lcd.print("Aire Limpio     ");  // Mostrar mensaje "Aire Limpio"
+    digitalWrite(ledVerde, HIGH);     // Encender LED verde
+    digitalWrite(ledRojo, LOW);       // Apagar LED rojo
+    digitalWrite(ledNaranja, LOW);    // Apagar LED naranja
+    digitalWrite(buzzer, LOW);        // Apagar buzzer
+  } else if (sensorValue >= umbralLimpio && sensorValue < umbralModerado) {
+    // Aire moderado
+    lcd.setCursor(0, 1);
+    lcd.print("Aire Moderado   ");  // Mostrar mensaje "Aire Moderado"
+    digitalWrite(ledVerde, LOW);      // Apagar LED verde
+    digitalWrite(ledRojo, LOW);       // Apagar LED rojo
+    digitalWrite(ledNaranja, HIGH);   // Encender LED naranja
+    digitalWrite(buzzer, LOW);        // Apagar buzzer
+  } else {
+    // Aire contaminado
+    lcd.setCursor(0, 1);
+    lcd.print("Aire Contaminado");  // Mostrar mensaje "Aire Contaminado"
+    digitalWrite(ledVerde, LOW);      // Apagar LED verde
+    digitalWrite(ledRojo, HIGH);      // Encender LED rojo
+    digitalWrite(ledNaranja, LOW);    // Apagar LED naranja
+    digitalWrite(buzzer, HIGH);       // Encender buzzer
+    delay(1000);                      // Buzzer suena por 1 segundo
+    digitalWrite(buzzer, LOW);        // Apagar buzzer
+    delay(1000);                      // Esperar 1 segundo antes de repetir
+  }
+
+  delay(1000);  // Pausa de 1 segundo antes de la siguiente lectura
+}
